@@ -38,13 +38,13 @@ np.save( f"{os.path.basename(edf_file)}_features.npy",features_df.to_numpy() )
 
 
 
- scaler = StandardScaler().fit(features_df)
+#scaler = StandardScaler().fit(features_df)
 
 
  ## Train test split
 
  # train == first five features.....
- training_features = scaler.transform(features_df)
+#training_features = scaler.transform(features_df)
 
 
  #
