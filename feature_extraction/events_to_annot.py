@@ -3,51 +3,61 @@ import pandas as pd
 import mne
 import pandas as pd
 import numpy as np
+import os
+
+min_n_sz = 4
+
+# This Dict stores the valid patient ids to be included:
+valid_patids = {
+    "/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena"  : [],
+    "/Volumes/Extreme SSD/EEG_Databases/BIDS_CHB-MIT": []
+}
 
 
-bids_root = "/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena"
-bids_root = "/Volumes/Extreme SSD/EEG_Databases/BIDS_CHB-MIT"
+for bids_root in valid_patids.keys():
 
-layout = BIDSLayout(bids_root, validate=False)
+    layout = BIDSLayout(bids_root, validate=False)
 
-valid_subject_ids = []
+    valid_subject_ids_ = []
 
-# Parse all events for a subject to check if more than 4 seizures (3 trainig + 1 test) are avalaible and if
-# the time differences are suffienct to use for the study
+    # Parse all events for a subject to check if more than 4 seizures (3 trainig + 1 test) are avalaible and if
+    # the time differences are suffienct to use for the study
 
-for subject in layout.get_subjects():
+    for subject in layout.get_subjects():
 
-    event_files = layout.get(
-        subject=subject,
-        suffix="events",
-        extension="tsv",
-        return_type="file"
-    )
+        event_files = layout.get(
+            subject=subject,
+            suffix="events",
+            extension="tsv",
+            return_type="file"
+        )
 
-    seizure_events = []
+        seizure_events = []
 
-    for ef in event_files:
-        df = pd.read_csv(ef, sep="\t")
+        for ef in event_files:
+            df = pd.read_csv(ef, sep="\t")
 
-        if "eventType" not in df.columns:
-            continue
+            if "eventType" not in df.columns:
+                continue
 
-        seizure_rows = df[df["eventType"].str.lower().str.contains("sz")]
+            seizure_rows = df[df["eventType"].str.lower().str.contains("sz")]
 
-        for idx, row in seizure_rows.iterrows():
-            seizure_events.append({
-                "events_file": ef,
-                "row_index": idx,
-                "onset": row.get("onset"),
-                "duration": row.get("duration")
-            })
-    # check if sufficient seizures are recorded
-    if len(seizure_events) >= 4:
-        valid_subject_ids.append(subject)
+            for idx, row in seizure_rows.iterrows():
+                seizure_events.append({
+                    "events_file": ef,
+                    "row_index": idx,
+                    "onset": row.get("onset"),
+                    "duration": row.get("duration")
+                })
+        # check if sufficient seizures are recorded
+        if len(seizure_events) >= min_n_sz:
+            valid_subject_ids_.append(subject)
 
-print(len(valid_subject_ids), valid_subject_ids)
+    print(len(valid_subject_ids_), valid_subject_ids_)
 
+    valid_patids[bids_root] = valid_subject_ids_
 
+print(valid_patids)
 ##### load one file and attach the seizure info to the mne.epoch instance
 
 subject = "01"   # zero-pad ie XX

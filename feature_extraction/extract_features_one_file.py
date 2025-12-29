@@ -4,7 +4,6 @@ from Log_reg_model.utils import *
 import pandas as pd
 import time
 import os
-
 print(f"mne version: {mne.__version__}")
 
 # Load the EDF file

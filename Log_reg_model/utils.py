@@ -28,9 +28,9 @@ def removeSPHfromSignal(seizure_data, seizure_datetime, seizure_onset):
     return seizure_data, seizure_datetime
 
 
-def getLabelsForSeizure(seizure_datetime, sop, seizure_onset):
+def getLabelsForSeizure(seizure_datetime, sop, seizure_onset, sph = 10):
     seizure_onset = convertIntoDatetime(seizure_onset)
-    preictal_datetime = seizure_onset - timedelta(minutes=(10 + sop))
+    preictal_datetime = seizure_onset - timedelta(minutes=(sph + sop))
 
     final_index = 0
     for i in range(len(seizure_datetime) - 1, 1, -1):

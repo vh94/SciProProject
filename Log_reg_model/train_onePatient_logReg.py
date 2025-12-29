@@ -13,7 +13,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# data
+# data is stored on external ssd
 os.chdir("..")
 os.chdir("..")
 os.chdir("Patients")
