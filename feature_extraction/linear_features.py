@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy import signal, stats
+from scipy import signal, stats, integrate
 import pywt
 
 # Define frequency bands
@@ -38,7 +38,8 @@ def compute_frequency_features(psds, freqs, channel_names, bands = bands ):
             psd = psds[epoch_idx, ch_idx, :]
 
             # Total power using trapezoidal integration
-            total_power = np.trapz(np.abs(psd), freqs)
+            #total_power = np.trapz(np.abs(psd), freqs)
+            total_power = integrate.trapezoid(np.abs(psd), freqs)
 
             # Compute absolute and relative band powers
             band_powers_abs = {}
@@ -46,7 +47,7 @@ def compute_frequency_features(psds, freqs, channel_names, bands = bands ):
 
             for band_name, (low, high) in bands.items():
                 idx = np.logical_and(freqs >= low, freqs < high)
-                band_power_abs = np.trapz(np.abs(psd[idx]), freqs[idx])
+                band_power_abs = integrate.trapezoid(np.abs(psd[idx]), freqs[idx])
                 band_power_rel = band_power_abs / total_power if total_power != 0 else 0
 
                 band_powers_abs[band_name] = band_power_abs
@@ -181,8 +182,7 @@ def univariate_linear_features(epochs):
                 epoch_features[f'{ch_name}_energy_D{d_idx}'] = energy
 
             # Energy of approximation coefficient A5
-            cA5 = coeffs[0]
-            epoch_features[f'{ch_name}_energy_A5'] = np.sum(cA5 ** 2)
+            epoch_features[f'{ch_name}_energy_A5'] = np.sum(coeffs[0] ** 2)
 
         all_features.append(epoch_features)
 
