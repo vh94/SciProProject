@@ -53,66 +53,7 @@ for bids_root in valid_patids.keys():
         # check if sufficient seizures are recorded
         if len(seizure_events) >= min_n_sz:
             valid_subject_ids_.append(subject)
-
-
-
-    #print(len(valid_subject_ids_), valid_subject_ids_)
-
     valid_patids[bids_root] = valid_subject_ids_
-
-#print(valid_patids)
-
-###### EXAMPLE CODE
-##### load one file and attach the seizure info to the mne.epoch instance
-
- # subject = "01"   # zero-pad ie XX
- # session = "01"
- # run = "00"
- # epoch_length = 5.0  # seconds
- #
- # ## BIDS:: get the eeg and events file locations
- # edf_file = layout.get(
-     # subject=subject,
-     # session=session,
-     # run=run,
-     # suffix="eeg",
-     # extension="edf",
-     # return_type="file"
- # )[0]
- #
- # ## load in the MNE raw eeg signal instance
- # raw = mne.io.read_raw_edf(edf_file, preload=True)
- # # and apply some filtering
- # raw.filter(l_freq=1., h_freq=40.) # (optional)
- #
- # ### BIDS:: get the events file
- # events_file = layout.get(
-     # subject=subject,
-     # session=session,
-     # run=run,
-     # suffix="events",
-     # extension="tsv",
-     # return_type="file"
- # )[0]
- # # load the events file int
- # events_df = pd.read_csv(events_file, sep="\t")
- #
- # ## make mne annotation dict
- # annotations = mne.Annotations(
-     # onset= events_df["onset"].values,
-     # duration=events_df.get("duration", np.zeros(len(events_df))).values,
-     # description=events_df["eventType"].astype(str).values,
- # )
- # # add to raw instance
- # raw.set_annotations(annotations)
- # ## Epoch data
- # epochs = mne.make_fixed_length_epochs(
-     # raw,
-     # duration=epoch_length,
-     # overlap=0,
-     # preload=True
- # )
- # labels = mne.events_from_annotations(raw)
 
 
 def get_seizure_intervals(events_df):
@@ -138,7 +79,7 @@ def get_seizure_intervals(events_df):
 # One for prediction: ie preictal phase is to be classified
 # SOP: seizure onset period
 # SPH: seizure prediction horizon
-
+# Are epochs / annot fine like this??
 def label_epochs_new(epochs,sfreq,annotations):
     # sfreq = edf.info["sfreq"]
     epoch_labels = np.zeros(len(epochs), dtype=np.int8)
@@ -156,14 +97,3 @@ def label_epochs_new(epochs,sfreq,annotations):
                 break
 
     return epoch_labels
-
- #seizure_intervals = get_seizure_intervals(events_df)
- #labels = label_epochs(epochs, seizure_intervals)
- #np.sum(labels)
- #print("Interictal epochs:", np.sum(labels == 0))
- #print("Ictal epochs:", np.sum(labels == 1))
- #epochs.metadata = pd.DataFrame({"label": labels})
- #epochs["label == 1"]   # ictal
- #epochs["label == 0"]   # interictal
- #
- #

@@ -1,4 +1,3 @@
-from scipy.ndimage import sum_labels
 
 
 def run_single_subject(subject, DB, nseizures_train = 3):
@@ -11,12 +10,12 @@ def run_single_subject(subject, DB, nseizures_train = 3):
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import (
         accuracy_score, f1_score, precision_score,
-        recall_score, confusion_matrix
+        recall_score, confusion_matrix, average_precision_score
     )
     import Log_reg_model.utils as utils
     from feature_extraction.linear_features import univariate_linear_features
     from feature_extraction.events_to_annot import (
-        get_seizure_intervals, label_epochs, label_epochs_new
+        get_seizure_intervals,  label_epochs_new
     )
 
     print(f"--------------------- Subject {subject} ----------------------")
@@ -69,7 +68,7 @@ def run_single_subject(subject, DB, nseizures_train = 3):
         print("Calculating 59 univariate linear Features..")
         features_df = univariate_linear_features(epochs)
         ### TRAIN TEST SPLIT: Assumes chronological order files
-        ### for pseudoprojective study, ie add firstn seizures for training
+        ### for pseudo- projective study, i.e. add first N=3 seizures for training
         if np.sum(labels) > 0: # THIS CHECK DOESNT WORK because sum is always zero
             count += 1
             print("Seizure event" ,count)
@@ -87,11 +86,12 @@ def run_single_subject(subject, DB, nseizures_train = 3):
     if len(test_features_list) == 0:
         print("No test seizures found; ")
         return -1
+
     X_train = np.concatenate(train_features_list)
     y_train = np.concatenate(train_label_list)
     X_test  = np.concatenate(test_features_list)
     y_test  = np.concatenate(test_label_list)
-
+    ### end of get patient features
 
     print(f'Training data shape {X_train.shape}\nTest data shape {X_test.shape}')
     # TODO check shapes !! (nfeatures x nchannels , nwindows)
@@ -104,7 +104,7 @@ def run_single_subject(subject, DB, nseizures_train = 3):
     ########################################### We´re now ready for estimation ...
     # ~ FEATURE SELECTION
     #
-    selector = SelectKBest(f_classif, k=10)
+    selector = SelectKBest(f_classif, k=40)
     # or varthreshold based
     # var_threshold = np.var(X_train, axis=0).mean()
     # selector = VarianceThreshold(threshold=var_threshold)  # TODO  where is the threshold
@@ -116,38 +116,64 @@ def run_single_subject(subject, DB, nseizures_train = 3):
     # Thus i use the class_weigth arg in the LogisticRegressor model setup::
 
     ##### Classifier LIST
-    clfs = [LogisticRegression(max_iter=1000, class_weight="balanced")]
+    #start = time.time()  # record start time
+
+    clfs = [LogisticRegression(max_iter=500, class_weight="balanced")]
     for clf in clfs :
         print(f'Training {clf}')
         #clf.fit(X_train, y_train,sample_weight=sample_weights)
         clf.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
+        y_prob = clf.predict_proba(X_test)[:, 1]
         cm = confusion_matrix(y_test, y_pred)
         #sensitivity = utils.seizureSensitivity(y_pred, y_test)
+        tn, fp, fn, tp = cm.ravel()
+
+        fpr = fp / (fp + tn)
+        specificity = tn / (tn + fp)
         acc = accuracy_score(y_test, y_pred)
         f1 = f1_score(y_test, y_pred)
         prec = precision_score(y_test, y_pred)
         rec = recall_score(y_test, y_pred)
+        ap = average_precision_score(y_test, y_prob)
+        fa_per_hour = fp / (len(y_test) * 5 / 3600)
 
     # TODO Store trained model to disk!
 
-    # TODO analyze perfomance in detection prediction and forecasting
-    # And write resuts to logfile
-    #print(f"Subject {subject} sensitivity: {sensitivity}")
-    sensitivity = 0.0
+    # TODO analyze performance in detection prediction and forecasting
     return {
         "subject": subject,
+        "classifier": f'{clf}',
         "confusion_matrix": cm,
-        "sensitivity": sensitivity,
         "predictions": y_pred,
         "accuracy": acc,
         "f1": f1,
         "precision": prec,
-        "recall": rec
+        "recall": rec,
+        "specificity": specificity,
+        "fpr_hour": fa_per_hour,
+        "PR-AUC": ap,
     }
-siena = '/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena'
+
+
+### Test
+DB = '/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena'
 from feature_extraction.events_to_annot import valid_patids
-sub = subjects = valid_patids[siena][1]
-out = run_single_subject(sub,siena)
+sub = subjects = valid_patids[DB][0]
+
+
+import time
+
+start = time.time()
+out = run_single_subject(sub,DB)
+end = time.time()
+print(f"Execution time: {end - start:.4f} seconds")
+
+with open("log.txt", "a") as f:
+    f.write(f" {int(time.time())}   {'-' * 60}\n")
+    f.write(f"{DB}\n")
+    for k, v in out.items():
+        f.write(f"{k}: {v}\n")
+
 print("FINISHED ---------------------------------- \n ---------- \n ------------ \n ------------")
 print(out)
