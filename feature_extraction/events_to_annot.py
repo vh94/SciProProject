@@ -130,26 +130,32 @@ def get_seizure_intervals(events_df):
 
 
 ##### URGENT CHECK THIS FUNCTION WRITE PROPER TEST!
-#####
-def label_epochs(epochs, seizure_intervals):
-    #sfreq = raw.info["sfreq"] # BUG TODO this has to come from somewhere else!
-    epoch_duration = epochs.tmax - epochs.tmin
-    n_epochs = len(epochs)
-    sfreq = 1 / epoch_duration
+# THIS IS THE SINGLE MOST IMPORTANT FUNCTION
+##### TODO
 
-    labels = np.zeros(n_epochs, dtype=int)
+# We want to do two types of labels
+# One for detection: ie class 1 = from onset till offset
+# One for prediction: ie preictal phase is to be classified
+# SOP: seizure onset period
+# SPH: seizure prediction horizon
 
-    for i in range(n_epochs):
-        t_start = epochs.events[i, 0] / sfreq
-        t_end = t_start + epoch_duration
+def label_epochs_new(epochs,sfreq,annotations):
+    # sfreq = edf.info["sfreq"]
+    epoch_labels = np.zeros(len(epochs), dtype=np.int8)
 
-        # If any seizure interval overlaps this epoch → label = 1
-        for sz_start, sz_end in seizure_intervals:
-            if (t_start < sz_end) and (t_end > sz_start):
-                labels[i] = 1
+    epoch_onsets = epochs.events[:, 0] / sfreq
+    epoch_offsets = epoch_onsets + epochs.tmax - epochs.tmin
+
+    for i, (ep_start, ep_end) in enumerate(zip(epoch_onsets, epoch_offsets)):
+        for ann_start, ann_dur in zip(annotations.onset, annotations.duration):
+            ann_end = ann_start + ann_dur
+
+            # any overlap → seizure
+            if ep_start < ann_end and ep_end > ann_start:
+                epoch_labels[i] = 1
                 break
-    return labels
 
+    return epoch_labels
 
  #seizure_intervals = get_seizure_intervals(events_df)
  #labels = label_epochs(epochs, seizure_intervals)

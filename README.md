@@ -1,38 +1,68 @@
 ## Comparison-Between-Epileptic-Seizure-Prediction-and-Forecasting
 
-This is the python code used in "Comparison Between Epileptic Seizure Prediction and Forecasting Based on Machine Learning", published in Scientific Reports (https://doi.org/10.1038/s41598-024-56019-z). This is the full code for three seizure prediction and forecasting Machine Learning frameworks (the classifiers for each framework are a Logistic Regression, an Ensemble of 15 Support Vector Machines (SVMs), and an ensemble of 15 Shallow neural Networks (SNNs)). It also provides scripts to plot the postprocessing output in time. The difference between prediction and forecasting in this study was the postprocessing method used, so each pipeline shows results for both approaches.
+>We would like to test if the seizure prediction problem from EEG has a general solution in
+form of a overall best model or is instead rather a patients specfic one ie ideal features and best type of classifier
+vary from subject to subject.
 
-This study uses data from the EPILEPSIAE database. The data was provided under license for this study by the EPILEPSIAE Consortium. Therefore, it is not publicly available. However, it can be made available upon reasonable request and with permission from the EPILEPSIAE Consortium.
 
-Three folders are available, one for each of the pipelines we mentioned above.
+>We would like to know the influence of dataset selection, epilepsy type and problem type,
+> ie prediction vs detection
+> on the performance of classifiers and features.
+
+,
+and many other factors such as
+dataset, specfic epilepsy and seizure type profile 
+
+### overview
+
+The prediction shift controls the problem type it is used to label the True positive 
+timepoints for the detection problem they are all ictal timepoints, for the predictiton they fall into the seizure
+```
+for database do:
+    for subject do:
+        # calculate feature Matrix
+        X <- (59 univarate features x N channels) x (time x f)/ window_length  
+        
+        for prediction_shift in tasks do:
+            # label TP windows:
+            y <- t_ictal + prediction_shift
+            
+            # 3 Pseudoprospective tt - split :
+            train <- (y,X)[until end postictal seizure (type) 3]
+            test <- (y,X)[all subsequent]
+            
+            # train patient specific AutoML model:
+            clf <- tpot_GA
+            for gen in generations do:
+                clf <<- evolve(clf, clf.train(train))
+                end
+            # Save best model stats for task
+            metrics.append(clf.score(test), clf.topFeatures)
+            # store train test data 
+            train_all.append(train)
+            test_all.append(test) 
+        end
+    end       
+```
+or train a global model
+hard TODO since, number and channel names, sampling freq, etc might differ !
+```
+train_all_tasks = train_all.reshape(len(all_tasks), )?
+#
+
+clf <- tpot_GA
+clf <<- evolve(clf, clf.train(train_all))    
+metrics.append(clf.score(test_all)) 
+```
+
+
 
 #### Main files
 These files are the ones you execute:
 
-- [main_train.py]: execute it to perform a grid-search to find the optimal hyperparameters (preictal period, k number of features, and/or SVM C value).
-- [main_test.py]: execute it to train and test the model using the optimal hyperparameters.
-- [main_plots.py]: execute it to plot the Firing Power over time.
-
 #### Function files
-These files contain function that are mostly specific to each pipeline:
 
-- [train_onePatient_logReg.py]: function to perform a grid-search and find the optimal hyperparameters for the Logistic Regression (preictal period and k number of features).
-- [train_onePatient_SVMs.py]: function to perform a grid-search and find the optimal hyperparameters for the 15 SVM ensemble (preictal period, k number of features, and SVM C value).
-- [train_onePatient_SNNs.py]: function to perform a grid-search and find the optimal hyperparameters for the 15 SNN ensemble (preictal period).
-- [train_SNN.py]: function to construct the SNN architecture, train it and save it.
-  
-- [test_onePatient_logReg.py]: function train and test the Logistic Regression.
-- [test_onePatient_SVMs.py]: function train and test the 15 SVM ensemble.
-- [test_onePatient_SNNs.py]: function train and test the 15 SNN ensemble.
-  
-- [test_onePatient_getPlots_logReg.py]: function train and test the Logistic Regression that returns the neccessary information to plot the Firing Power over time.
-- [test_onePatient_getPlots_SVMs.py]: function train and test the 15 SVM ensemble that returns the neccessary information to plot the Firing Power over time.
-- [test_onePatient_getPlots_SNNs.py]: function train and test the 15 SNN ensemble that returns the neccessary information to plot the Firing Power over time.
-- [getPlots_logReg.py]: function Firing Power over time using the Logistic Regression.
-- [getPlots_SVMs.py]: function Firing Power over time using the 15 SVM ensemble.
-- [getPlots_SNNs.py]: function Firing Power over time using the 15 SNN ensemble.
 
-- [utils.py]: script containing several utility functions used throughout the pipeline.
 
 ## Please cite this work as:
 

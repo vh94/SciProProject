@@ -9,11 +9,14 @@ def run_single_subject(subject, DB, nseizures_train = 3):
     from sklearn.preprocessing import StandardScaler
     from sklearn.feature_selection import SelectKBest, f_classif
     from sklearn.linear_model import LogisticRegression
-    from sklearn.metrics import confusion_matrix
+    from sklearn.metrics import (
+        accuracy_score, f1_score, precision_score,
+        recall_score, confusion_matrix
+    )
     import Log_reg_model.utils as utils
     from feature_extraction.linear_features import univariate_linear_features
     from feature_extraction.events_to_annot import (
-        get_seizure_intervals, label_epochs
+        get_seizure_intervals, label_epochs, label_epochs_new
     )
 
     print(f"--------------------- Subject {subject} ----------------------")
@@ -54,13 +57,12 @@ def run_single_subject(subject, DB, nseizures_train = 3):
             edf, duration=5.0, preload=True, verbose=False
         )
 
-        # We want to do two types of labels
-        # One for detection: ie class 1 = from onset till offset
-        # One for prediction: ie preictal phase is to be classified
-            # SOP: seizure onset period
-            # SPH: seizure prediction horizon
 
-        labels = label_epochs(epochs, get_seizure_intervals(events))
+        print("Labeling epochs")
+        #labels = mne.events_from_annotations(edf)
+        #labels = label_epochs(epochs, get_seizure_intervals(events))
+        labels = label_epochs_new(epochs,edf.info["sfreq"],annotations)
+        print(labels, sum(labels))
         epochs.metadata = pd.DataFrame({"label": labels}) # TODO is the Effective window size : 1.000 (s) coming from here???
         # just create other prediction problem type etc by shifting this labels column ie label_detect , label_predict
 
@@ -68,45 +70,52 @@ def run_single_subject(subject, DB, nseizures_train = 3):
         features_df = univariate_linear_features(epochs)
         ### TRAIN TEST SPLIT: Assumes chronological order files
         ### for pseudoprojective study, ie add firstn seizures for training
-        if count <= nseizures_train :
+        if np.sum(labels) > 0: # THIS CHECK DOESNT WORK because sum is always zero
+            count += 1
+            print("Seizure event" ,count)
+        if count <= nseizures_train:
             train_features_list.append(features_df)
             train_label_list.append(labels)
-            count += 1
+            print("Add to training set")
         else:
-            if sum(labels) > 0: # only add when containing at least one seizure
-                test_features_list.append(features_df)
-                test_label_list.append(labels)
+            test_features_list.append(features_df)
+            test_label_list.append(labels)
+            print("Add to test set")
 
-    print(len(train_features_list), len(test_features_list))
-    if len(test_label_list) == 0:
-        print("No test data found; ")
+    print(len(test_label_list), len(test_features_list))
+
+    if len(test_features_list) == 0:
+        print("No test seizures found; ")
         return -1
     X_train = np.concatenate(train_features_list)
     y_train = np.concatenate(train_label_list)
     X_test  = np.concatenate(test_features_list)
     y_test  = np.concatenate(test_label_list)
+
+
     print(f'Training data shape {X_train.shape}\nTest data shape {X_test.shape}')
     # TODO check shapes !! (nfeatures x nchannels , nwindows)
 
-    # TODO write features train and test data to disk!
+    # TODO write features | y for train and test data to disk!
     # SCALING
     scaler = StandardScaler().fit(X_train)
     X_train = scaler.transform(X_train)
     X_test  = scaler.transform(X_test)
-
-    # FEATURE SELECTION
+    ########################################### We´re now ready for estimation ...
+    # ~ FEATURE SELECTION
+    #
     selector = SelectKBest(f_classif, k=10)
     # or varthreshold based
     # var_threshold = np.var(X_train, axis=0).mean()
     # selector = VarianceThreshold(threshold=var_threshold)  # TODO  where is the threshold
     X_train = selector.fit_transform(X_train, y_train)
     X_test  = selector.transform(X_test)
-    # elif fselection = 'var_threshold'
-
     # SAMPLE WEIGHTS
     # class_weights = utils.computeBalancedClassWeights(y_train)
     # sample_weights = utils.computeSampleWeights(y_train, class_weights) # NOTE This is not a safe function (zeros edgecase)
     # Thus i use the class_weigth arg in the LogisticRegressor model setup::
+
+    ##### Classifier LIST
     clfs = [LogisticRegression(max_iter=1000, class_weight="balanced")]
     for clf in clfs :
         print(f'Training {clf}')
@@ -115,6 +124,10 @@ def run_single_subject(subject, DB, nseizures_train = 3):
         y_pred = clf.predict(X_test)
         cm = confusion_matrix(y_test, y_pred)
         #sensitivity = utils.seizureSensitivity(y_pred, y_test)
+        acc = accuracy_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
+        prec = precision_score(y_test, y_pred)
+        rec = recall_score(y_test, y_pred)
 
     # TODO Store trained model to disk!
 
@@ -126,7 +139,11 @@ def run_single_subject(subject, DB, nseizures_train = 3):
         "subject": subject,
         "confusion_matrix": cm,
         "sensitivity": sensitivity,
-        "predictions": y_pred
+        "predictions": y_pred,
+        "accuracy": acc,
+        "f1": f1,
+        "precision": prec,
+        "recall": rec
     }
 siena = '/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena'
 from feature_extraction.events_to_annot import valid_patids
