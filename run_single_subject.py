@@ -5,6 +5,7 @@ def run_single_subject(subject, DB, nseizures_train = 3):
     import pandas as pd
     import mne
     from bids import BIDSLayout
+    from pathlib import Path
     from sklearn.preprocessing import StandardScaler
     from sklearn.feature_selection import SelectKBest, f_classif
     from sklearn.linear_model import LogisticRegression
@@ -13,7 +14,7 @@ def run_single_subject(subject, DB, nseizures_train = 3):
         recall_score, confusion_matrix, average_precision_score
     )
     import Log_reg_model.utils as utils
-    from feature_extraction.linear_features import univariate_linear_features
+    from feature_extraction.linear_features import univariate_linear_features, linear_feature_names
     from feature_extraction.events_to_annot import (
         get_seizure_intervals,  label_epochs_new
     )
@@ -22,13 +23,16 @@ def run_single_subject(subject, DB, nseizures_train = 3):
 
     # Recreate layout INSIDE process
     layout = BIDSLayout(DB, validate=False)
-
     train_features_list, test_features_list = [], []
     train_label_list, test_label_list = [], []
 
     all_edf_files = layout.get(subject=subject, extension='edf', return_type="file")
     all_tsv_files = layout.get(subject=subject, extension='tsv', return_type="file")
 
+    # Make an identical dir to store the derivatives:::
+    deriv_root = Path(DB) / "derivatives" / "linear_features"
+    sub_path = deriv_root / f"sub-{subject}" / "eeg"
+    sub_path.mkdir(parents=True, exist_ok=True)
 
     # It is not that easy because the test files have to contain at least one seizure !
     #train_edf_files = all_edf_files[:3] # this condition len > 3 has to be checked prior to passing !
@@ -56,17 +60,23 @@ def run_single_subject(subject, DB, nseizures_train = 3):
             edf, duration=5.0, preload=True, verbose=False
         )
 
+        print("Calculating 59 univariate linear Features..")
+        features_df = univariate_linear_features(epochs)
+        features_df.to_csv(sub_path / f"sub-{subject}_linear-features.tsv",
+                           sep="\t",
+                           index=False)
 
+        #ch_names = layout.get_channel_names(subject=subject, datatype="eeg")
         print("Labeling epochs")
         #labels = mne.events_from_annotations(edf)
         #labels = label_epochs(epochs, get_seizure_intervals(events))
         labels = label_epochs_new(epochs,edf.info["sfreq"],annotations)
         print(labels, sum(labels))
         epochs.metadata = pd.DataFrame({"label": labels}) # TODO is the Effective window size : 1.000 (s) coming from here???
+        epochs.metadata.to_csv(sub_path / f"sub-{subject}_detection-labels.tsv",)
         # just create other prediction problem type etc by shifting this labels column ie label_detect , label_predict
 
-        print("Calculating 59 univariate linear Features..")
-        features_df = univariate_linear_features(epochs)
+
         ### TRAIN TEST SPLIT: Assumes chronological order files
         ### for pseudo- projective study, i.e. add first N=3 seizures for training
         if np.sum(labels) > 0: # THIS CHECK DOESNT WORK because sum is always zero
@@ -91,10 +101,34 @@ def run_single_subject(subject, DB, nseizures_train = 3):
     y_train = np.concatenate(train_label_list)
     X_test  = np.concatenate(test_features_list)
     y_test  = np.concatenate(test_label_list)
+    print("Saving features")
+    np.save("X_train.npy",X_train)
+    np.save("y_train.npy",y_train)
+    np.save("X_test.npy",X_test)
+    np.save("y_test.npy",y_test)
+
+     #np.save(X_test, "X_test.npy")
+     #np.save(y_train, "y_train.npy")
+     #np.save(y_test, "y_test.npy")
+   # print("Saving bids")
+
+
+    # Wrap numpy array → Raw object
+    #raw = mne.io.RawArray(X_train.T, info)
+    #write_raw_bids(
+    #    raw,
+    #    DB,
+    #    format="EDF",
+    #    overwrite=True
+    #)
     ### end of get patient features
 
     print(f'Training data shape {X_train.shape}\nTest data shape {X_test.shape}')
     # TODO check shapes !! (nfeatures x nchannels , nwindows)
+    #n_feat = 59
+    #n_channels =
+    #n_windows =
+    print("Saving bids")
 
     # TODO write features | y for train and test data to disk!
     # SCALING

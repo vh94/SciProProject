@@ -5,25 +5,15 @@ import pandas as pd
 import numpy as np
 import os
 
-# This script is generally intendet to be run once to assign variables
 # The minuimum number of seizures to include the subject should be 4 ( 3 train and at least one test)
-min_n_sz = 4
+# I will default for a larger number tho in this project to reduce the number of individuals for comput. efficancy
 
-# This Dict stores the valid patient ids to be included:
-# Define the BIDS DB root paths as the keys in this dictonary::
-valid_patids = {
-    "/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena"  : [],
-    "/Volumes/Extreme SSD/EEG_Databases/BIDS_CHB-MIT": []
-}
-
-# Parse all events for a subject to check if more than 4 seizures (3 trainig + 1 test) are avalaible and if
+# Parse all events for a subject to check if more than minseizures  seizures (3 trainig + 1 test) are avalaible and if
 # the time differences are suffienct to use for the study
+def get_valid_subject_ids(bids_root, min_n_sz = 4, eventType = "sz"):
 
-for bids_root in valid_patids.keys():
-
-    layout = BIDSLayout(bids_root, validate=False)
-    valid_subject_ids_ = []
-
+    valid_subject_ids = []
+    layout = BIDSLayout(bids_root)
     for subject in layout.get_subjects():
 
         event_files = layout.get(
@@ -38,11 +28,11 @@ for bids_root in valid_patids.keys():
         for ef in event_files:
             df = pd.read_csv(ef, sep="\t")
 
-            if "eventType" not in df.columns:
+            if "eventType" not in df.columns: # No events in this file
                 continue
-
-            seizure_rows = df[df["eventType"].str.lower().str.contains("sz")]
-
+            # check if eventype matches:
+            seizure_rows = df[df["eventType"].str.lower().str.contains(eventType)]
+            # append
             for idx, row in seizure_rows.iterrows():
                 seizure_events.append({
                     "events_file": ef,
@@ -50,10 +40,19 @@ for bids_root in valid_patids.keys():
                     "onset": row.get("onset"),
                     "duration": row.get("duration")
                 })
-        # check if sufficient seizures are recorded
+        # check if sufficient seizures are recorded:
         if len(seizure_events) >= min_n_sz:
-            valid_subject_ids_.append(subject)
-    valid_patids[bids_root] = valid_subject_ids_
+            valid_subject_ids.append(subject)
+
+    return valid_subject_ids
+
+# This Dict stores the valid patient ids to be included:
+def get_valid_subject_ids_multistudy(bids_roots,min_n_sz= 5):
+    return { bids_root : get_valid_subject_ids(bids_root,min_n_sz ) for bids_root in bids_roots }
+
+valid_patids = get_valid_subject_ids_multistudy(["/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena" ,"/Volumes/Extreme SSD/EEG_Databases/BIDS_CHB-MIT" ],min_n_sz = 4)
+valid_patids
+
 
 
 def get_seizure_intervals(events_df):
