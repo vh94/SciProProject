@@ -79,20 +79,73 @@ def get_seizure_intervals(events_df):
 # SOP: seizure onset period
 # SPH: seizure prediction horizon
 # Are epochs / annot fine like this??
-def label_epochs_new(epochs,sfreq,annotations):
-    # sfreq = edf.info["sfreq"]
-    epoch_labels = np.zeros(len(epochs), dtype=np.int8)
 
-    epoch_onsets = epochs.events[:, 0] / sfreq
-    epoch_offsets = epoch_onsets + epochs.tmax - epochs.tmin
+def label_epochs_new(epochs, annotations):
+    """
+    Label epochs as seizure (1) or non-seizure (0) based on annotations.
+    """
+    # initialize labels
+    y = np.zeros(len(epochs), dtype=np.int8)
 
-    for i, (ep_start, ep_end) in enumerate(zip(epoch_onsets, epoch_offsets)):
-        for ann_start, ann_dur in zip(annotations.onset, annotations.duration):
-            ann_end = ann_start + ann_dur
+    # epoch start/end in *samples*
+    ep_start_samp = epochs.events[:, 0]
+    ep_end_samp = ep_start_samp + epochs.time_as_index(
+        epochs.tmax, use_rounding=False
+    )[0]
 
-            # any overlap → seizure
-            if ep_start < ann_end and ep_end > ann_start:
-                epoch_labels[i] = 1
-                break
+    # annotation start/end in *samples*
+    ann_start_samp = epochs.time_as_index(
+        annotations.onset, use_rounding=False
+    )
+    ann_end_samp = epochs.time_as_index(
+        annotations.onset + annotations.duration, use_rounding=False
+    )
 
-    return epoch_labels
+    # check overlap (vectorized)
+    for a_start, a_end in zip(ann_start_samp, ann_end_samp):
+        overlap = (ep_start_samp < a_end) & (ep_end_samp > a_start)
+        y[overlap] = 1
+
+    return y
+
+def labels_for_detection(epochs, annotations):
+    ep_start = epochs.events[:, 0][:, None]
+    ep_end = ep_start + epochs.time_as_index(epochs.tmax)[0]
+
+    ann_start = epochs.time_as_index(annotations.onset)[None, :]
+    ann_end = epochs.time_as_index(
+        annotations.onset + annotations.duration
+    )[None, :]
+
+    overlap = (ep_start < ann_end) & (ep_end > ann_start)
+    return overlap.any(axis=1).astype(np.int8)
+
+def labels_for_prediction(
+    epochs,
+    annotations,
+    SOP=30 * 60,
+    SPH=10 * 60,
+):
+    ep_start = epochs.events[:, 0]
+    ep_end = ep_start + epochs.time_as_index(epochs.tmax)[0]
+
+    y = np.zeros(len(epochs), dtype=np.int8)
+    valid = np.ones(len(epochs), dtype=bool)
+
+    SPH_samp = epochs.time_as_index(SPH)[0]
+    SOP_samp = epochs.time_as_index(SOP)[0]
+
+    seizure_onsets = epochs.time_as_index(annotations.onset)
+
+    for onset in seizure_onsets:
+        sop_start = onset - SOP_samp - SPH_samp
+        sop_end = onset - SPH_samp
+
+        # SOP labels
+        y[(ep_start < sop_end) & (ep_end > sop_start)] = 1
+
+        # invalidate SPH + ictal
+        valid[ep_start >= sop_end] = False
+
+    return y, valid
+

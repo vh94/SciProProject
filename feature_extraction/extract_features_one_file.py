@@ -7,21 +7,22 @@
 
 import mne
 import linear_features
-from Log_reg_model.utils import *
 import pandas as pd
 import time
 import os
+from feature_extraction.events_to_annot import labels_for_prediction, labels_for_detection
 print(f"mne version: {mne.__version__}")
 
 # Load the EDF file
-edf_file = '/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena/sub-00/ses-01/eeg/sub-00_ses-01_task-szMonitoring_run-00_eeg.edf'  # Replace with the path to your EDF file
+edf_file = '/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena/sub-00/ses-01/eeg/sub-00_ses-01_task-szMonitoring_run-02_eeg.edf'  # Replace with the path to your EDF file
 raw = mne.io.read_raw_edf(edf_file, preload=True)
-mne.viz.plot_raw(raw)
+#mne.viz.plot_raw(raw)
 
 # load annotations
-ann_file = '/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena/sub-00/ses-01/eeg/sub-00_ses-01_task-szMonitoring_run-00_events.tsv'
+ann_file = '/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena/sub-00/ses-01/eeg/sub-00_ses-01_task-szMonitoring_run-02_events.tsv'
 annot = pd.read_csv(ann_file, sep='\t')
 
+annot
 #getLabelsForSeizure(annot.dateTime.values, 0, annot.onset.values) # ????
 
 # Apply a bandpass filter (optional)
@@ -31,6 +32,13 @@ raw.filter(l_freq=1, h_freq=40)
 epoch_length = 5  # 5 seconds
 epochs = mne.make_fixed_length_epochs(raw, duration=epoch_length, overlap=0, preload=True)
 
+print(sum(label_epochs)*5)
+annot
+
+labels_det =labels_for_detection(epochs, annot)
+labels_pred, valid =labels_for_prediction(epochs, annot)
+
+all(label_epochs_f == label_epochs)
 #### USING NEW METHOD
 start_time = time.time()  # Get the start time
 features_df = linear_features.univariate_linear_features(epochs)

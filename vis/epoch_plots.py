@@ -6,6 +6,7 @@ print(f"mne version: {mne.__version__}")
 # Load the EDF file
 edf_file = '/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena/sub-00/ses-01/eeg/sub-00_ses-01_task-szMonitoring_run-00_eeg.edf'  # Replace with the path to your EDF file
 raw = mne.io.read_raw_edf(edf_file, preload=True)
+mne.viz.plot_raw(raw)
 # Apply a bandpass filter (optional)
 raw.filter(l_freq=1, h_freq=40)
 # Define the window length (5 seconds) and create epochs
