@@ -69,9 +69,7 @@ def get_seizure_intervals(events_df):
     return intervals
 
 
-##### URGENT CHECK THIS FUNCTION WRITE PROPER TEST!
-# THIS IS THE SINGLE MOST IMPORTANT FUNCTION
-##### TODO
+
 
 # We want to do two types of labels
 # One for detection: ie class 1 = from onset till offset
@@ -80,33 +78,6 @@ def get_seizure_intervals(events_df):
 # SPH: seizure prediction horizon
 # Are epochs / annot fine like this??
 
-def label_epochs_new(epochs, annotations):
-    """
-    Label epochs as seizure (1) or non-seizure (0) based on annotations.
-    """
-    # initialize labels
-    y = np.zeros(len(epochs), dtype=np.int8)
-
-    # epoch start/end in *samples*
-    ep_start_samp = epochs.events[:, 0]
-    ep_end_samp = ep_start_samp + epochs.time_as_index(
-        epochs.tmax, use_rounding=False
-    )[0]
-
-    # annotation start/end in *samples*
-    ann_start_samp = epochs.time_as_index(
-        annotations.onset, use_rounding=False
-    )
-    ann_end_samp = epochs.time_as_index(
-        annotations.onset + annotations.duration, use_rounding=False
-    )
-
-    # check overlap (vectorized)
-    for a_start, a_end in zip(ann_start_samp, ann_end_samp):
-        overlap = (ep_start_samp < a_end) & (ep_end_samp > a_start)
-        y[overlap] = 1
-
-    return y
 
 def labels_for_detection(epochs, annotations):
     ep_start = epochs.events[:, 0][:, None]
@@ -126,6 +97,13 @@ def labels_for_prediction(
     SOP=30 * 60,
     SPH=10 * 60,
 ):
+    """
+    Creates labels for seizure predictions;
+    returns labels np.array
+     "y" "1" preictal and "0" interictal
+     and a valid mask, where the ictal and SPH labels are marked "0"
+     to remove them from the labels as well as form the training data.
+    """
     ep_start = epochs.events[:, 0]
     ep_end = ep_start + epochs.time_as_index(epochs.tmax)[0]
 

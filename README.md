@@ -1,14 +1,14 @@
 ## Bids Derivatives for seizure prediction problems
 
-### Data
-
-This project is intended for use with eeg data in BIDS format, it 
-was developed using two scalp EEG databases Siena and CHB_MIT 
+In this project  patient specific logistic regression classifiers are used to either detect or
+predict epileptic seizures with different occurrence periods in advance. 
+Patient scalp EEG from to commonly used BIDS available databases, Siena and CHB_MIT 
 
 ### Patient selection
 
 In this work only subjects (patients) with more than five annotated seizures are considered
-This is done to ensure a sufficient number of three training seizures and at least two test seizures. 
+This is done to ensure a sufficient number of three training seizures and at least two test seizures.
+
 ### Feature calculation
 
 The project contains a function (see: `./feature_extraction/linear_features.py`)
@@ -27,6 +27,20 @@ To distinguish between the two tasks
 1 detection , 2 prediction , another derivative seizures_pred is created 
 which contains multiple .npy files of true labels for different types of problems detection windows, SPHs, SOPs can be
 described
+
+### Files
+
+`main_create_features_labels.py`
+
+selects patients for study based on constraints (number of seizures), calculates features and labels for different tasks
+and saves them as derivatives
+
+`main_run_classifiers.py`
+
+creates pseudoprospective train-test splits, trains and tests (evaluates) a set of classifiers for a given task.
+
+
+
 
 
 
