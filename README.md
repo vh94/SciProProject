@@ -43,8 +43,7 @@ and saves them as derivatives
 
 creates pseudoprospective train-test splits, trains and tests (evaluates) a set of classifiers for a given task.
 
-### Results
-![img.png](./figures/all_subjects_results_pred.png)
+
 #### Main files
 These files are the ones you execute:
 
@@ -52,7 +51,11 @@ These files are the ones you execute:
 
 
 
-The machine learning code and may of the pricples of this project where inspired by  
-Costa, G., Teixeira, C. & Pinto, M.F. Comparison between epileptic seizure prediction and forecasting based on machine learning. Sci Rep 14, 5653 (2024). https://doi.org/10.1038/s41598-024-56019-z
+The machine learning code and may of the principles of this project where inspired by  
+>Costa, G., Teixeira, C. & Pinto, M.F. Comparison between epileptic seizure prediction and forecasting based on machine learning. Sci Rep 14, 5653 (2024). https://doi.org/10.1038/s41598-024-56019-z
 
-## Please cite this work as:
+and 
+
+> Pinto MF, Batista J, Leal A, Lopes F, Oliveira A, Dourado A, et al. The goal of explaining black boxes in EEG seizure prediction is not to explain models' decisions. Epilepsia Open. 2023; 8: 285–297. https://doi.org/10.1002/epi4.12748 
+
+![img.png](figures/idpinimg.png)
