@@ -30,7 +30,7 @@ def create_features_labels_single_subject(subject, DB):
         edf_file = Path(edf_file)
         edf = (
             mne.io.read_raw_edf(edf_file, preload=True, verbose=False)
-            .filter(1., 40., verbose=False)
+            .filter(1., 40., verbose=False) # Dont filter each file ?!
         )
         events = pd.read_csv(tsv_file, sep="\t")
         print(f"{edf_file} has {len(events)} events")
@@ -122,38 +122,40 @@ def run_logreg_subjects(subject, DB, mode="detection", nseizures_train=3, SOP = 
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import (
         accuracy_score, f1_score, precision_score, recall_score,
-        confusion_matrix, average_precision_score
+        confusion_matrix, average_precision_score, roc_auc_score
     )
     # Make the Bids path to the linear_features derivative at the subject eeg
     sub_path = Path(DB) / "derivatives" / "linear_features" / f"sub-{subject}" / "eeg"
     # --- Load and concatenate all features ---
     X_list = []
     feat_files = list(sub_path.glob("sub-*_linear-features.npz")) # these are in correct order ie run - 00 01 02 03  if user is sane
-    # no intend to defend this
-    print(feat_files)
     for f in feat_files:
         data = np.load(f, allow_pickle=True)
         X_list.append(data["X"])
     X = np.concatenate(X_list, axis=0)  # concatenate along epochs
-
+    print("X.shape", X.shape)
+    print("X NaNs:", np.isnan(X).any())
+    if np.isnan(X).any():
+        print(f"X has NaN, {np.isnan(X).mean() * 100} percentage xnans found")
+        print("replace nan values with 0.5 for now")
+        X = np.nan_to_num(X, nan=0.5)
     # --- Load all detection label files and concatenate ---
 
     if mode == "detection":
         y_list = []
         det_files = list(sub_path.glob("sub-*_detection-labels.npy")) #  magic wildcard results in run 00 01 temporal ordered files again, naja......
-        print(det_files)
         for f in det_files:
             y_list.append(np.load(f).astype(np.int8))
         y = np.concatenate(y_list, axis=0)
         print(len(y_list))
-        print(X.shape)
         print(y.shape)
+
+
 
     elif mode == "prediction":
          y_list = []
          mask_list = []
          pred_files = list(sub_path.glob(f"sub-*_prediction-labels_SOP-{SOP}*.npz")) # ....
-         print(pred_files)
          for f in pred_files:
              data = np.load(f, allow_pickle=True)
              y_list.append(data["y"].astype(np.int8))
@@ -167,8 +169,10 @@ def run_logreg_subjects(subject, DB, mode="detection", nseizures_train=3, SOP = 
          # --- Apply valid mask  ---
          X = X[valid_mask]
          y = y[valid_mask]
-
-
+         print("X dtype:", X.dtype)
+         print("Is masked:", np.ma.isMaskedArray(X))
+    # here such a situation :  000111000011100 -> 000011110000 can occurr, reduciong the number of test seizures
+    # below the minimum 1 thus the try condition
     print("train test split")
     # Scan until we've included N seizures
     # Find all seizure starts
@@ -178,8 +182,13 @@ def run_logreg_subjects(subject, DB, mode="detection", nseizures_train=3, SOP = 
         seizure_starts = np.insert(seizure_starts, 0, 0)
 
     # Take the N-th seizure
-    nth_start = seizure_starts[nseizures_train - 1]
-
+    try:
+        nth_start = seizure_starts[nseizures_train - 1]
+    except: # fail gracefully if sub id 4 situation of closeby seizures ie SOP SPH window deletes
+        print(
+            f"Subject {subject} Failed ! Invalid prediction horizon or occurrence period for test set creation n_start"
+        )
+        return None
     # Find the end of the N-th seizure (last consecutive 1)
     nth_end = nth_start
     while nth_end < len(y) and y[nth_end] == 1:
@@ -197,20 +206,25 @@ def run_logreg_subjects(subject, DB, mode="detection", nseizures_train=3, SOP = 
     X_test = X[test_mask]
     y_test = y[test_mask]
 
-    print(f"[{mode}] Training data shape: {X_train.shape}, Test data shape: {X_test.shape}")
+    print("X_train NaNs:", np.isnan(X_train).any())
+    print("X_test NaNs:", np.isnan(X_test).any())
 
+    print("X_test dtype:", X_test.dtype)
+    print(f"[{mode}] Training data shape: {X_train.shape}, Test data shape: {X_test.shape}")
+    print(f"Training data nans??: {np.isnan(X_train).any()}")
+    print(f"Test data nans??: {np.isnan(X_test).any()}")
     # --- Scaling ---
     scaler = StandardScaler().fit(X_train)
     X_train = scaler.transform(X_train)
     X_test = scaler.transform(X_test)
 
     # --- Feature selection ---
-    selector = SelectKBest(f_classif, k=40)
+    selector = SelectKBest(f_classif, k=100)
     X_train = selector.fit_transform(X_train, y_train)
     X_test = selector.transform(X_test)
 
     # --- Train classifier ---
-    clf = LogisticRegression(max_iter=1500, class_weight="balanced")
+    clf = LogisticRegression(max_iter=1200, class_weight="balanced")
     clf.fit(X_train, y_train)
 
     y_pred = clf.predict(X_test)
@@ -229,7 +243,8 @@ def run_logreg_subjects(subject, DB, mode="detection", nseizures_train=3, SOP = 
     prec = precision_score(y_test, y_pred)
     rec = recall_score(y_test, y_pred)
     ap = average_precision_score(y_test, y_prob)
-    fa_per_hour = fp / (len(y_test) * 5 / 3600)  # 5s epochs
+    AUC = roc_auc_score(y_test, y_pred)
+    fa_per_hour = fp / (len(y_test)/ (3600/5) )  # 5s epochs
 
     return {
         "subject": subject,
@@ -244,6 +259,7 @@ def run_logreg_subjects(subject, DB, mode="detection", nseizures_train=3, SOP = 
         "specificity": specificity,
         "fpr_hour": fa_per_hour,
         "PR-AUC": ap,
+        "AUC": AUC
     }
 
 ## TODO analyze performance in detection prediction and forecasting

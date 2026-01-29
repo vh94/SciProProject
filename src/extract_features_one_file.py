@@ -2,8 +2,6 @@
 # from the linear_features submodule.
 # In the example it will be used to calculate the 59 univariate features as described in ... and later used by ...
 # for all channels of a singular EDF file.
-#
-
 
 import mne
 import linear_features

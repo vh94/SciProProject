@@ -9,12 +9,12 @@ chbmit = '/Volumes/Extreme SSD/EEG_Databases/BIDS_CHB-MIT'
 
 
 def main():
-    DB = chbmit
-    subjects = valid_patids[DB]
-
+    DB = siena
+    #subjects = valid_patids[DB]
+    subjects = ["10", "14"]
     results = []
 
-    with ProcessPoolExecutor(max_workers=4) as executor:
+    with ProcessPoolExecutor(max_workers=10) as executor:
         futures = {
             executor.submit(create_features_labels_single_subject, subject, DB): subject
             for subject in subjects

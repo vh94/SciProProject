@@ -55,31 +55,11 @@ valid_patids
 
 
 
-def get_seizure_intervals(events_df):
-    seizure_rows = events_df[
-        events_df["eventType"].str.lower().str.contains("sz")
-    ]
-
-    intervals = []
-    for _, row in seizure_rows.iterrows():
-        start = row["onset"]
-        end = row["onset"] + row.get("duration", 0)
-        intervals.append((start, end))
-
-    return intervals
-
-
-
-
-# We want to do two types of labels
-# One for detection: ie class 1 = from onset till offset
-# One for prediction: ie preictal phase is to be classified
-# SOP: seizure onset period
-# SPH: seizure prediction horizon
-# Are epochs / annot fine like this??
-
-
 def labels_for_detection(epochs, annotations):
+    """
+    Creates labels for detection of seizure events, ie 1 for ictal and 0 for all other states
+    :returns
+    """
     ep_start = epochs.events[:, 0][:, None]
     ep_end = ep_start + epochs.time_as_index(epochs.tmax)[0]
 

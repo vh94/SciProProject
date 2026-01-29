@@ -4,16 +4,20 @@ In this project  patient specific logistic regression classifiers are used to ei
 predict epileptic seizures with different occurrence periods in advance. 
 Patient scalp EEG from to commonly used BIDS available databases, Siena and CHB_MIT 
 
+### Directory overview
+
 ### Patient selection
 
-In this work only subjects (patients) with more than five annotated seizures are considered
-This is done to ensure a sufficient number of three training seizures and at least two test seizures.
+In this work only subjects (patients) with six or more annotated seizures are considered
+This is done to ensure a sufficient number of three training seizures and at least three test seizures.
 
 ### Feature calculation
 
 The project contains a function (see: `./feature_extraction/linear_features.py`)
-to extract 59 univariate linear EEG features per channel. They are a mix of time, and frequency domain features used in 
-previous EEG studies
+to extract 59 univariate linear EEG features per channel. 
+They are a mix of time, and frequency domain features used in 
+previous EEG studies explained in https://doi.org/10.1002/epi4.12748
+
 
 
 #### Feature storage
@@ -39,53 +43,8 @@ and saves them as derivatives
 
 creates pseudoprospective train-test splits, trains and tests (evaluates) a set of classifiers for a given task.
 
-
-
-
-
-
-
-
-The prediction shift controls the problem type it is used to label the True positive 
-timepoints for the detection problem they are all ictal timepoints, for the predictiton they fall into the seizure
-```
-for database do:
-    for subject do:
-        # calculate feature Matrix
-        X <- (59 univarate features x N channels) x (time x f)/ window_length  
-        
-        for prediction_shift in tasks do:
-            # label TP windows:
-            y <- t_ictal + prediction_shift
-            
-            # 3 Pseudoprospective tt - split :
-            train <- (y,X)[until end postictal seizure (type) 3]
-            test <- (y,X)[all subsequent]
-            
-            # train patient specific AutoML model:
-            clf <- tpot_GA
-            for gen in generations do:
-                clf <<- evolve(clf, clf.train(train))
-                end
-            # Save best model stats for task
-            metrics.append(clf.score(test), clf.topFeatures)
-            # store train test data 
-            train_all.append(train)
-            test_all.append(test) 
-        end
-    end       
-```
-or train a global model
-hard TODO since, number and channel names, sampling freq, etc might differ !
-```
-train_all_tasks = train_all.reshape(len(all_tasks), )?
-clf <- tpot_GA
-clf <<- evolve(clf, clf.train(train_all))    
-metrics.append(clf.score(test_all)) 
-```
-
-
-
+### Results
+![img.png](./figures/all_subjects_results_pred.png)
 #### Main files
 These files are the ones you execute:
 
