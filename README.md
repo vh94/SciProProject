@@ -66,7 +66,8 @@ and saves them as derivatives, and
 which creates pseudoprospective train-test splits, trains and tests (evaluates) a set of classifiers for a given task.
 
 Finally,
-- `alaize_performace.py`
+
+- `analaize_performace.py`
 
 is a file that makes a boxplot showcasing the performance of the patient specific models for different tasks.
 
@@ -84,6 +85,23 @@ in the BIDS derivative directory.
 
 - Finally `run_model.py` contains the method to load the features and labels form the Derivatives, make the train test split
 and run the classifiers.
+
+
+### Some results
+
+Results are stored in the results dir. 
+Atm they are a csv containing the prediction and detection metics for each patient, as well as a figure created from the `analyze_performance.py`
+script.
+
+The figure is:
+
+
+![PR_AUC](results/all_subjects_results_pred_3sz_train.png)
+
+
+### Issues and Discussion further ideas
+
+Are in the `./results/report.md` file.
 
 
 ### Acknowledgements

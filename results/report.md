@@ -12,12 +12,14 @@ BIDS data structure and the possibility to store database derivatives and Multip
 
 ## Preliminary Results
 
-Using the first two seizures as training set
-Top: left PR-AUC vs SOP ; right: detection vs Prediction performance, prediction is for SOP of 40 min.
-Bottom: left AUC vs SOP right: detection vs Prediction performance, prediction is for SOP of 40 min.;
-![](./results/all_subjects_results_pred_3sz_train.png)
+PR_ AUC and AUC as a function of SOP
 
 Using the first three seizures as training set
+
+![PR_AUC](all_subjects_results_pred_3sz_train.png)
+
+Top: left PR-AUC vs SOP ; right: detection vs Prediction performance, prediction is for SOP of 40 min.
+Bottom: left AUC vs SOP right: detection vs Prediction performance, prediction is for SOP of 40 min.;
 
 ## Missing Pieces/Bugs/potential issues
 
@@ -28,9 +30,13 @@ Using the first three seizures as training set
   - At this time NAN values where just replaced by the value 0.5 
 - The EEG Data was bandpass filtered from 1 to 40Hz at a _per file level_ before concatination this could introduce some form of bias
 - No re-referencing to the average montage nor any other preprocessing (artefact removal) was performed
+
 ## Discussion
 
-
+We see an expected increase in AUC and PR AUC with larger SOP. 
+A SOP of 40 minutes seems to perform best for Logistic regression on the datasets under study.
+Th number of patients that are tested decreases with increasing SOP duration, since the train dataset gets "cut"; 
+resulting in too little seizure events to test.
 
 ## Next Steps
 
