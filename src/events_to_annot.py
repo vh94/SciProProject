@@ -10,7 +10,7 @@ import os
 
 # Parse all events for a subject to check if more than minseizures  seizures (3 trainig + 1 test) are avalaible and if
 # the time differences are suffienct to use for the study
-def get_valid_subject_ids(bids_root, min_n_sz = 4, eventType = "sz"):
+def get_valid_subject_ids(bids_root, min_n_sz = 4, eventType = "sz") -> list:
 
     valid_subject_ids = []
     layout = BIDSLayout(bids_root)
@@ -50,10 +50,6 @@ def get_valid_subject_ids(bids_root, min_n_sz = 4, eventType = "sz"):
 def get_valid_subject_ids_multistudy(bids_roots,min_n_sz= 5):
     return { bids_root : get_valid_subject_ids(bids_root,min_n_sz ) for bids_root in bids_roots }
 
-valid_patids = get_valid_subject_ids_multistudy(["/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena" ,"/Volumes/Extreme SSD/EEG_Databases/BIDS_CHB-MIT" ],min_n_sz = 4)
-valid_patids
-
-
 
 def labels_for_detection(epochs, annotations):
     """
@@ -68,15 +64,15 @@ def labels_for_detection(epochs, annotations):
         annotations.onset + annotations.duration
     )[None, :]
 
-    overlap = (ep_start < ann_end) & (ep_end > ann_start)
-    return overlap.any(axis=1).astype(np.int8)
+    ictal = (ep_start < ann_end) & (ep_end > ann_start)
+    return ictal.any(axis=1).astype(np.int8)
 
 def labels_for_prediction(
     epochs,
     annotations,
     SOP=30 * 60,
     SPH=10 * 60,
-):
+)-> tuple:
     """
     Creates labels for seizure predictions;
     returns labels np.array

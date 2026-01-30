@@ -1,5 +1,5 @@
-from src.events_to_annot import valid_patids
-from run_single_subject import run_logreg_subjects
+from src.events_to_annot import get_valid_subject_ids_multistudy
+from src.run_models import run_logreg_subjects
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import pandas as pd
@@ -8,7 +8,7 @@ import pandas as pd
 # .. define paths to BIDS DBS containing eeg data in (mne-readable) edf format
 siena = '/Volumes/Extreme SSD/EEG_Databases/BIDS_Siena'
 chbmit = '/Volumes/Extreme SSD/EEG_Databases/BIDS_CHB-MIT'
-
+valid_patids = get_valid_subject_ids_multistudy([siena, chbmit], min_n_sz=5)
 
 
 def main_detection(DB):
@@ -18,7 +18,7 @@ def main_detection(DB):
 
     with ProcessPoolExecutor(max_workers=10) as executor:
         futures = {
-            executor.submit(run_logreg_subjects, subject, DB, nseizures_train=2): subject
+            executor.submit(run_logreg_subjects, subject, DB, nseizures_train=3): subject
             for subject in subjects
         }
 
@@ -38,9 +38,9 @@ def main_prediction(DB, SOP):
 
     results = []
 
-    with ProcessPoolExecutor(max_workers=10) as executor:
+    with ProcessPoolExecutor(max_workers=20) as executor:
         futures = {
-            executor.submit(run_logreg_subjects, subject, DB, mode = "prediction", SOP = SOP, nseizures_train=2): subject
+            executor.submit(run_logreg_subjects, subject, DB, mode = "prediction", SOP = SOP, nseizures_train=3): subject
             for subject in subjects
         }
 
@@ -58,9 +58,9 @@ def main_prediction(DB, SOP):
 if __name__ == "__main__":
 
     print("------------- RUNNING DETECTION TASKS -------------")
+    print(f"Detecting subjects...{valid_patids}")
     print("------- CHB-MIT")
     results_chbmit = main_detection(chbmit)
-    #results_chbmit[:] = [x for x in results_chbmit if x is not None]
     results_chbmit = pd.DataFrame([re for re in results_chbmit if re is not None])  # things might go wrong, i will look into it ; but for now we just go on
     results_chbmit["DB"] = "chbmit"
     print("------- DETECTION ------ SIENA")
@@ -80,7 +80,8 @@ if __name__ == "__main__":
         results_chbmit["DB"] = "chbmit"
         results_chbmit["SOP"] = SOP
         # Subject 10 failed: Input X contains NaN.
-        # TODO:: FIx BUGS: either no seizure starts found?! or the issue is:
+        # TODO:: FIx BUGS: either no seizure starts found SOP overlaps?!
+        #  or the issue is:
         #  Input X contains NaN.
 
 

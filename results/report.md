@@ -7,15 +7,17 @@ Effective siezure prediction and fair comparision between models and patients is
 the prediction accuracy across patient specific models from two databases.
 
 2. The other focus of the project was to build a more robust, reproducible and performant end to end ML pipeline, mainly by leveraging the 
-BIDS data structure and the possibility to store database derivatives
+BIDS data structure and the possibility to store database derivatives and Multiprocessing for ML training.
 
 
 ## Preliminary Results
 
+Using the first two seizures as training set
+Top: left PR-AUC vs SOP ; right: detection vs Prediction performance, prediction is for SOP of 40 min.
+Bottom: left AUC vs SOP right: detection vs Prediction performance, prediction is for SOP of 40 min.;
+![](./results/all_subjects_results_pred_3sz_train.png)
 
-
-
-![img.png](./figures/all_subjects_results_pred.png)
+Using the first three seizures as training set
 
 ## Missing Pieces/Bugs/potential issues
 
@@ -26,20 +28,21 @@ BIDS data structure and the possibility to store database derivatives
   - At this time NAN values where just replaced by the value 0.5 
 - The EEG Data was bandpass filtered from 1 to 40Hz at a _per file level_ before concatination this could introduce some form of bias
 - No re-referencing to the average montage nor any other preprocessing (artefact removal) was performed
-- BIDS derivatives needs at least a JSON sidecar to be compliant
-
-
 ## Discussion
 
 
 
 ## Next Steps
 
-- Event based statistics 
+- Event based statistics Seizure SS; FPR/h , Firing Power method! 
 - more classifiers to compare 
-  - Ensamble: ExtraTreesClassifier; SVM ; CNN
+  - Ensemble: ExtraTreesClassifier; SVM ; CNN
   
 - Feature importance analysis using SHAP (Shapley Additive Explanations) 
   - for patient specific models
   - dissect, which type of feature form where (ie which 10-20 electrode) predicts preictal phases the best
+
+- BIDS derivatives needs at least a JSON sidecar to be compliant
+- Time plots of emitted warnings for explanatory visualisation of the SOP, SPH etc
+- writing a test suite to have 100% insurance on the correctness of label and feature creation.
 

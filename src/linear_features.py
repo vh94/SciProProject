@@ -15,7 +15,7 @@ bands = {
     'gamma4': (103, 128)
 }
 
-def compute_frequency_features(psds, freqs, channel_names, bands = bands):
+def compute_frequency_features(psds, freqs, channel_names, bands = bands) -> pd.DataFrame:
     """
     Compute EEG frequency domain features for seizure prediction.
     These are
